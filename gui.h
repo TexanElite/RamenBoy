@@ -13,10 +13,9 @@ typedef struct display_t {
     unsigned int frames;
 } display_t;
 
-extern const int WINDOW_WIDTH;
-extern const int WINDOW_HEIGHT;
-
 display_t *display_new();
 void display_destroy(display_t* display);
+void display_draw_point(display_t *display, int row, int col, int r, int g, int b);
+void display_render(display_t *display);
 
 #endif

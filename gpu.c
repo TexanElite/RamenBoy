@@ -3,12 +3,19 @@
 const unsigned short LINE_ADDR = 0xFF44;
 const unsigned short STATUS_ADDR = 0xFF41;
 
-gpu_t *gpu_init(cpu_t *cpu) {
+gpu_t *gpu_new(cpu_t *cpu) {
     gpu_t *gpu = (gpu_t*)malloc(sizeof(gpu_t));
     gpu->cpu = cpu;
     gpu->memory = cpu->memory;
     gpu->display = display_new();
     memset(gpu->pixels, 0, sizeof(gpu->pixels));
+}
+
+void gpu_free(gpu_t *gpu) {
+    if (gpu != NULL) {
+        display_destroy(gpu->display);
+        free(gpu);
+    }
 }
 
 void gpu_draw_screen(gpu_t *gpu) {

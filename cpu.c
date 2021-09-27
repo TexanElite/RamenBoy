@@ -2380,11 +2380,12 @@ void (*opcode_table[256])(cpu_t *cpu, registers_t *regs) = {
     rst_38,
 };
 
-int execute_cycle(cpu_t *cpu) {
+int cpu_step(cpu_t *cpu) {
     mmu_t *memory = cpu->memory;
     registers_t *regs = &cpu->regs;
     unsigned char instruction = mmu_read(memory, regs->PC++);
     void (*operation)(cpu_t *cpu, registers_t *regs) = opcode_table[instruction];
+    printf("%x\n", instruction);
     if (operation == NULL) {
         printf("Operation not implemented: %x\n", instruction);
         return 1;
@@ -2399,20 +2400,21 @@ cpu_t *cpu_new() {
 }
 
 void cpu_free(cpu_t *cpu) {
-    mmu_free(cpu->memory);
-    free(cpu);
+    if (cpu != NULL) {
+        free(cpu);
+    }
 }
 
 // Purely for testing purposes, don't look here
 
-int main() {
-    int count = 0;
-    cpu_t *cpu = cpu_new();
-    cpu->memory = mmu_new("/home/sidh/Downloads/Tetris (World) (Rev A).gb");
-    for (;; count++) {
-        int status = execute_cycle(cpu);
-        if (status != 0) break;
-    }
-    cpu_free(cpu);
-    printf("%d\n", count);
-}
+// int main() {
+//     int count = 0;
+//     cpu_t *cpu = cpu_new();
+//     cpu->memory = mmu_new("/home/sidh/Downloads/Tetris (World) (Rev A).gb");
+//     for (;; count++) {
+//         int status = execute_cycle(cpu);
+//         if (status != 0) break;
+//     }
+//     cpu_free(cpu);
+//     printf("%d\n", count);
+// }

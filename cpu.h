@@ -1,3 +1,6 @@
+#ifndef CPU_H
+#define CPU_H
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -13,3 +16,8 @@ typedef struct cpu_t {
     unsigned char t;
 } cpu_t;
 
+cpu_t *cpu_new();
+void cpu_free(cpu_t *cpu);
+int cpu_step(cpu_t *cpu);
+
+#endif
