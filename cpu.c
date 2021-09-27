@@ -1676,7 +1676,8 @@ void add_a_u(cpu_t *cpu, registers_t *regs) {
 }
 
 void rst_00(cpu_t *cpu, registers_t *regs) {
-    mmu_write_short(cpu->memory, regs->SP - 2, regs->PC);
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
     regs->PC = 0x00;
     cpu->m = 4;
     cpu->t = 16;
@@ -1761,7 +1762,8 @@ void adc_a_u(cpu_t *cpu, registers_t *regs) {
 }
 
 void rst_08(cpu_t *cpu, registers_t *regs) {
-    mmu_write_short(cpu->memory, regs->SP - 2, regs->PC);
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
     regs->PC = 0x08;
     cpu->m = 4;
     cpu->t = 16;
@@ -1837,21 +1839,11 @@ void sub_a_u(cpu_t *cpu, registers_t *regs) {
 }
 
 void rst_10(cpu_t *cpu, registers_t *regs) {
-    mmu_write_short(cpu->memory, regs->SP - 2, regs->PC);
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
     regs->PC = 0x10;
     cpu->m = 4;
     cpu->t = 16;
-}
-
-// 0xf5
-void cp_a_u(cpu_t *cpu, registers_t *regs) {
-    unsigned char val = mmu_read(cpu->memory, regs->PC++);
-    set_flag_zero(regs, regs->A == val);
-    set_flag_neg(regs, 1);
-    set_flag_half(regs, (regs->A & 0x0F) < (val & 0x0F));
-    set_flag_carry(regs, regs->A < val);
-    cpu->m = 2;
-    cpu->t = 8;
 }
 
 void ret_c(cpu_t *cpu, registers_t *regs) {
@@ -1922,7 +1914,8 @@ void sbc_a_u(cpu_t *cpu, registers_t *regs) {
 }
 
 void rst_18(cpu_t *cpu, registers_t *regs) {
-    mmu_write_short(cpu->memory, regs->SP - 2, regs->PC);
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
     regs->PC = 0x18;
     cpu->m = 4;
     cpu->t = 16;
@@ -1968,7 +1961,8 @@ void and_a_u(cpu_t *cpu, registers_t *regs) {
 }
 
 void rst_20(cpu_t *cpu, registers_t *regs) {
-    mmu_write_short(cpu->memory, regs->SP - 2, regs->PC);
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
     regs->PC = 0x20;
     cpu->m = 4;
     cpu->t = 16;
@@ -1976,8 +1970,139 @@ void rst_20(cpu_t *cpu, registers_t *regs) {
 
 void add_sp_i(cpu_t *cpu, registers_t *regs) {
     char val = mmu_read(cpu->memory, regs->PC++);
-    regs->SP += val;
-    
+    unsigned short result = regs->SP + val;
+    set_flag_zero(regs, 0);
+    set_flag_neg(regs, 0);
+    set_flag_half(regs, (result & 0x0F) < (regs->SP & 0x0F));
+    set_flag_carry(regs, result < regs->SP);
+    regs->SP = result;
+    cpu->m = 4;
+    cpu->t = 16;
+}
+
+void jp_hl(cpu_t *cpu, registers_t *regs) {
+    regs->PC = get_HL(regs);
+    cpu->m = 1;
+    cpu->t = 4;
+}
+
+void ld_puu_a(cpu_t *cpu, registers_t *regs) {
+    unsigned short addr = mmu_read_short(cpu->memory, regs->PC);
+    regs->PC += 2;
+    mmu_write(cpu->memory, addr, regs->A);
+    cpu->m = 4;
+    cpu->t = 16;
+}
+
+void xor_a_u(cpu_t *cpu, registers_t *regs) {
+    unsigned char val = mmu_read(cpu->memory, regs->PC++);
+    unsigned char result = regs->A ^ val;
+    regs->A = result;
+    set_flag_zero(regs, regs->A == 0);
+    set_flag_neg(regs, 0);
+    set_flag_half(regs, 0);
+    set_flag_carry(regs, 0);
+    cpu->m = 2;
+    cpu->t = 8;
+}
+
+void rst_28(cpu_t *cpu, registers_t *regs) {
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
+    regs->PC = 0x28;
+    cpu->m = 4;
+    cpu->t = 16;
+}
+
+void ld_a_ffpu(cpu_t *cpu, registers_t *regs) {
+    unsigned short addr = 0xff00 + mmu_read(cpu->memory, regs->PC++);
+    regs->A = mmu_read(cpu->memory, addr);
+    cpu->m = 3;
+    cpu->t = 12;
+}
+
+void pop_af(cpu_t *cpu, registers_t *regs) {
+    set_AF(regs, mmu_read_short(cpu->memory, regs->SP));
+    regs->SP += 2;
+    cpu->m = 3;
+    cpu->t = 12;
+}
+
+void ld_a_ffpc(cpu_t *cpu, registers_t *regs) {
+    unsigned short addr = 0xff00 + regs->C;
+    regs->A = mmu_read(cpu->memory, addr);
+    cpu->m = 2;
+    cpu->t = 8;
+}
+
+void di(cpu_t *cpu, registers_t *regs) {
+    // TODO: Implement instruction
+}
+
+void push_af(cpu_t *cpu, registers_t *regs) {
+    mmu_write_short(cpu->memory, regs->SP - 2, get_AF(regs));
+    cpu->m = 4;
+    cpu->t = 16;
+}
+
+void or_a_u(cpu_t *cpu, registers_t *regs) {
+    unsigned char val = mmu_read(cpu->memory, regs->PC++);
+    unsigned char result = regs->A | val;
+    regs->A = result;
+    set_flag_zero(regs, regs->A == 0);
+    set_flag_neg(regs, 0);
+    set_flag_half(regs, 0);
+    set_flag_carry(regs, 0);
+    cpu->m = 2;
+    cpu->t = 8;
+}
+
+void rst_30(cpu_t *cpu, registers_t *regs) {
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
+    regs->PC = 0x30;
+    cpu->m = 4;
+    cpu->t = 16;
+}
+
+void ld_hl_sppi(cpu_t *cpu, registers_t *regs) {
+    // TODO: Implement
+}
+
+void ld_sp_hl(cpu_t *cpu, registers_t *regs) {
+    regs->SP = get_HL(regs);
+    cpu->m = 2;
+    cpu->t = 8;
+}
+
+void ld_a_puu(cpu_t *cpu, registers_t *regs) {
+    unsigned short addr = mmu_read_short(cpu->memory, regs->PC);
+    regs->PC += 2;
+    regs->A = mmu_read(cpu->memory, addr);
+    cpu->m = 4;
+    cpu->t = 16;
+}
+
+void ei(cpu_t *cpu, registers_t *regs) {
+    // TODO: Implement
+}
+
+void cp_a_u(cpu_t *cpu, registers_t *regs) {
+    unsigned char val = mmu_read(cpu->memory, regs->PC++);
+    set_flag_zero(regs, regs->A == val);
+    set_flag_neg(regs, 1);
+    set_flag_half(regs, (regs->A & 0x0F) < (val & 0x0F));
+    set_flag_carry(regs, regs->A < val);
+    cpu->m = 2;
+    cpu->t = 8;
+}
+
+void rst_38(cpu_t *cpu, registers_t *regs) {
+    regs->SP -= 2;
+    mmu_write_short(cpu->memory, regs->SP, regs->PC);
+    regs->PC = 0x38;
+    cpu->m = 4;
+    cpu->t = 16;
 }
 
 void (*opcode_table[256])(cpu_t *cpu, registers_t *regs) = {
@@ -2203,56 +2328,56 @@ void (*opcode_table[256])(cpu_t *cpu, registers_t *regs) = {
     adc_a_u,
     rst_08,
     // 0xD_
+    ret_nc,
+    pop_de,
+    jp_nc_uu,
     NULL,
+    call_nc_uu,
+    push_de,
+    sub_a_u,
+    rst_10,
+    ret_c,
+    reti,
+    jp_c_uu,
     NULL,
+    call_c_uu,
     NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    sbc_a_u,
+    rst_18,
     // 0xE_
+    ld_ffpu_a,
+    pop_hl,
+    ld_ffpc_a,
+    NULL,
+    NULL,
+    push_hl,
+    and_a_u,
+    rst_20,
+    add_sp_i,
+    jp_hl,
+    ld_puu_a,
     NULL,
     NULL,
     NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    xor_a_u,
+    rst_28,
     // 0xF_
+    ld_a_ffpu,
+    pop_af,
+    ld_a_ffpc,
+    di,
     NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+    push_af,
+    or_a_u,
+    rst_30,
+    ld_hl_sppi,
+    ld_sp_hl,
+    ld_a_puu,
+    ei,
     NULL,
     NULL,
     cp_a_e,
-    NULL,
+    rst_38,
 };
 
 int execute_cycle(cpu_t *cpu) {
